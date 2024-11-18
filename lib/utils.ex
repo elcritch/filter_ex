@@ -176,10 +176,8 @@ defmodule FilterEx.Utils do
           {rows, cols}
       end
 
-    IO.inspect({total_rows, total_cols}, label: "TOTAL")
     # Initialize an empty matrix of zeros
     result = Nx.broadcast(0, {total_rows, total_cols})
-    IO.inspect(result, label: "INIT")
 
     # Fill in each block along the diagonal
     for mat <- matrices, reduce: {result, 0, 0} do
@@ -188,11 +186,6 @@ defmodule FilterEx.Utils do
         updated_matrix =
           acc
           |> Nx.put_slice([start_row, start_col], mat)
-          # |> Nx.slice_along_axis(start_row, rows, axis: 0)
-          # |> Nx.slice_along_axis(start_col, cols, axis: 1)
-          # |> Nx.add(mat)
-
-      IO.inspect(updated_matrix, label: "MAT!")
 
       {updated_matrix, start_row + rows, start_col + cols}
     end

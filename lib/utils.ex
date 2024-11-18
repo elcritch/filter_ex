@@ -103,14 +103,15 @@ defmodule FilterEx.Utils do
 
     Examples
     --------
-    >>> # constant velocity model in a 3D world with a 10 Hz update rate
-    >>> Q_discrete_white_noise(2, dt=0.1, var=1., block_size=3)
-    array([[0.000025, 0.0005  , 0.      , 0.      , 0.      , 0.      ],
+    iex> # constant velocity model in a 3D world with a 10 Hz update rate
+    ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1., block_size=3)
+    Nx.tensor([[0.000025, 0.0005  , 0.      , 0.      , 0.      , 0.      ],
            [0.0005  , 0.01    , 0.      , 0.      , 0.      , 0.      ],
            [0.      , 0.      , 0.000025, 0.0005  , 0.      , 0.      ],
            [0.      , 0.      , 0.0005  , 0.01    , 0.      , 0.      ],
            [0.      , 0.      , 0.      , 0.      , 0.000025, 0.0005  ],
-           [0.      , 0.      , 0.      , 0.      , 0.0005  , 0.01    ]])
+           [0.      , 0.      , 0.      , 0.      , 0.0005  , 0.01    ]
+    ], type: :f32)
 
     References
     ----------

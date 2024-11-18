@@ -103,15 +103,15 @@ defmodule FilterEx.Utils do
 
     Examples
     --------
-    # iex> # constant velocity model in a 3D world with a 10 Hz update rate
-    # ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1.0, block_size=3)
-    # Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
-    #            [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
-    #            [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
-    #            [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
-    #            [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
-    #            [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
-    # ], type: :f32)
+    iex> # constant velocity model in a 3D world with a 10 Hz update rate
+    ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1.0, block_size=3)
+    Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
+               [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
+               [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
+               [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
+               [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
+               [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
+    ], type: :f32)
 
     References
     ----------
@@ -119,7 +119,7 @@ defmodule FilterEx.Utils do
     Bar-Shalom. "Estimation with Applications To Tracking and Navigation".
     John Wiley & Sons, 2001. Page 274.
     """
-  def q_discrete_white_noise(dim, dt \\ 1.0, var \\ 1.0, block_size \\ 1, order_by_dim \\ true) do
+  def q_discrete_white_noise(dim, dt \\ 1.0, var \\ 1.0, block_size \\ 1, order_by_dim \\ true, mtyp \\ :f32) do
 
     if !(dim in [2, 3, 4]) do
       raise %ArgumentError{message: "dim must be between 2 and 4"}
@@ -140,11 +140,12 @@ defmodule FilterEx.Utils do
            [(dt**4)/6,  (dt**3)/2,   dt**2,     dt],
            [(dt**3)/6,  (dt**2)/2 ,  dt,        1.0]]
     end
+    |> Nx.tensor(type: mtyp)
 
     if order_by_dim do
-      # block_diag(*[qQ]*block_size) * var
-      # wtf python...
-      block_diag(1..block_size |> Enum.map(qQ)) |> Nx.multiply(var)
+      # block_diag(*[qQ]*block_size) * var # wtf python...
+      mats = 1..block_size |> Enum.map(fn _ -> qQ end)
+      block_diag(mats) |> Nx.multiply(var)
     else
       order_by_derivative(qQ, dim, block_size) |> Nx.multiply(var)
     end
@@ -170,7 +171,7 @@ defmodule FilterEx.Utils do
   """
   def block_diag(matrices) when is_list(matrices) do
     # Calculate the total size of the resulting matrix
-    IO.inspect(matrices, label: "block_diag:matrices")
+    # IO.inspect(matrices, label: "block_diag:matrices")
     {total_rows, total_cols, {styp, ssz}} =
       for mat <- matrices, reduce: {0, 0, nil} do
         {rows, cols, _typ} ->
@@ -179,7 +180,7 @@ defmodule FilterEx.Utils do
           {rows, cols, Nx.type(mat)}
       end
 
-    IO.inspect({total_rows, total_cols, {styp, ssz}}, label: "block_diag:total indx")
+    # IO.inspect({total_rows, total_cols, {styp, ssz}}, label: "block_diag:total indx")
     # Initialize an empty matrix of zeros
     result =
       Nx.tensor(0, type: :"#{styp}#{ssz}")

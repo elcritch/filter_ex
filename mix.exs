@@ -16,6 +16,8 @@ defmodule FilterEx.MixProject do
   defp description do
     """
     Some basic filters like Kalman filters implemented in Elixir with Nx.
+
+    Largely based on a port of the excellent https://github.com/rlabbe/filterpy library.
     """
   end
 

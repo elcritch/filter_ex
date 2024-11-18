@@ -1,4 +1,4 @@
-defmodule Filters.Exponential do
+defmodule FilterEx.ExpAverage do
 
     # Kalman Paramters
     defstruct [

@@ -1,11 +1,9 @@
-defmodule Filters.AdaptiveKalman do
+defmodule FilterEx.Kalman do
   require Logger
 
   import Nx, only: [dot: 2]
-
-  # import Matrex
-  # alias MatrexNumerix.Math
-  # import Matrex.Operators
+  import FilterEx.Utils
+  alias FilterEx.ExpAverage
 
   # Kalman Paramters
   defstruct [
@@ -256,7 +254,7 @@ defmodule Filters.AdaptiveKalman do
     eps_max = opts |> Keyword.fetch!(:eps_max)
     eps_alpha = opts |> Keyword.get(:eps_alpha, 0.9)
 
-    exp_filter = %Filters.Exponential{alpha: eps_alpha, value: 0}
+    exp_filter = %ExpAverage{alpha: eps_alpha, value: 0}
 
     {ak, ak_est, ak_res, ak_eps, _exp_filter, qvals, _count} =
       for zz <- z, reduce: {self, [], [], [], exp_filter, [], 0} do
@@ -281,7 +279,7 @@ defmodule Filters.AdaptiveKalman do
               # |> Nx.log()
               |> then(& &1[0][0] |> Nx.to_number())
 
-            exp_filter = exp_filter |> Filters.Exponential.update(eps)
+            exp_filter = exp_filter |> ExpAverage.update(eps)
             eps = exp_filter.value
 
             # ak_eps |> Enum.take(3)

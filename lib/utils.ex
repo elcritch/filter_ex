@@ -13,22 +13,22 @@ defmodule FilterEx.Utils do
 
     ## Examples
 
-      iex> reshape_z(3.0, 1, 1)
+      iex> FilterEx.Utils.reshape_z(3.0, 1, 1)
       Nx.tensor([ 3.0 ], names: [:x])
 
-      iex> reshape_z(3.0, 1, 2)
+      iex> FilterEx.Utils.reshape_z(3.0, 1, 2)
       Nx.tensor([[ 3.0 ]], names: [:x, :y])
 
-      iex> reshape_z([3.0], 1, 1)
+      iex> FilterEx.Utils.reshape_z([3.0], 1, 1)
       Nx.tensor([ 3.0 ], names: [:x])
 
-      iex> reshape_z([3.0], 1, 2)
+      iex> FilterEx.Utils.reshape_z([3.0], 1, 2)
       Nx.tensor([[3.0]], names: [:x, :y])
 
-      iex> reshape_z([3.0,2.0], 2, 1)
+      iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 1)
       Nx.tensor([3.0, 2.0], names: [:x])
 
-      iex> reshape_z([3.0,2.0], 2, 2)
+      iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 2)
       Nx.tensor([[3.0], [2.0]], names: [:x, :y])
 
   """
@@ -62,6 +62,7 @@ defmodule FilterEx.Utils do
     z
   end
 
+  @deprecated
   @doc """
     Returns the Q matrix for the Discrete Constant White Noise
     Model. dim may be either 2, 3, or 4 dt is the time step, and sigma
@@ -117,7 +118,7 @@ defmodule FilterEx.Utils do
     Bar-Shalom. "Estimation with Applications To Tracking and Navigation".
     John Wiley & Sons, 2001. Page 274.
     """
-  defp q_discrete_white_noise(dim, dt=1.0, var=1.0, block_size=1, order_by_dim=true) do
+  def q_discrete_white_noise(dim, dt=1.0, var=1.0, block_size=1, order_by_dim=true) do
 
     if !(dim in [2, 3, 4]) do
       raise %ArgumentError{message: "dim must be between 2 and 4"}
@@ -148,6 +149,53 @@ defmodule FilterEx.Utils do
   end
 
   @doc """
+  Creates a block diagonal matrix from a list of matrices using Nx.
+
+  ## Examples
+
+  iex> Nx.tensor([[1, 2, 3], [4, 5, 6]], type: :f32) |> FilterEx.Utils.ravel()
+  Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], type: :f32)
+
+
+  """
+  def block_diag(matrices) when is_list(matrices) do
+    # Calculate the total size of the resulting matrix
+    {total_rows, total_cols} =
+      Enum.reduce(matrices, {0, 0}, fn mat, {rows, cols} ->
+        {rows + tuple_size(Nx.shape(mat)) |> elem(0), cols + tuple_size(Nx.shape(mat)) |> elem(1)}
+      end)
+
+    # Initialize an empty matrix of zeros
+    result = Nx.broadcast(0, {total_rows, total_cols})
+
+    # Fill in each block along the diagonal
+    Enum.reduce(matrices, {result, 0, 0}, fn mat, {acc, start_row, start_col} ->
+      {rows, cols} = Nx.shape(mat)
+      updated_matrix =
+        acc
+        |> Nx.slice_along_axis(start_row, rows, axis: 0)
+        |> Nx.slice_along_axis(start_col, cols, axis: 1)
+        |> Nx.add(mat)
+
+      {updated_matrix, start_row + rows, start_col + cols}
+    end)
+    |> elem(0)
+  end
+
+  @doc """
+  Flattens the input tensor into a 1D tensor using Nx.
+  """
+  def ravel(tensor) do
+    # Get the total number of elements in the tensor
+    num_elements = Nx.size(tensor)
+
+    # Reshape the tensor into a 1D tensor
+    Nx.reshape(tensor, {num_elements})
+  end
+
+
+  @deprecated
+  @doc """
     Given a matrix Q, ordered assuming state space
         [x y z x' y' z' x'' y'' z''...]
 
@@ -171,12 +219,12 @@ defmodule FilterEx.Utils do
 
 
   """
-  defp order_by_derivative(qQ, dim, block_size) do
+  def order_by_derivative(qQ, dim, block_size) do
     nN = dim * block_size
     dD = zeros({nN, nN})
     # qQ = array(qQ)
 
-    for {x, i} <- Enum.with_index(qQ |> Nx.ravel()), reduce: dD do
+    for {x, i} <- Enum.with_index(qQ |> ravel()), reduce: dD do
       dD ->
         f = Nx.eye(block_size) * x
         ix = div(i, dim) * block_size

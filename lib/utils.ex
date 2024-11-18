@@ -104,7 +104,7 @@ defmodule FilterEx.Utils do
     Examples
     --------
     iex> # constant velocity model in a 3D world with a 10 Hz update rate
-    ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1.0, block_size=3)
+    ...> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3)
     Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
                [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
                [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
@@ -119,7 +119,13 @@ defmodule FilterEx.Utils do
     Bar-Shalom. "Estimation with Applications To Tracking and Navigation".
     John Wiley & Sons, 2001. Page 274.
     """
-  def q_discrete_white_noise(dim, dt \\ 1.0, var \\ 1.0, block_size \\ 1, order_by_dim \\ true, mtyp \\ :f32) do
+  def q_discrete_white_noise(dim, opts) do
+
+    dt = opts |> Keyword.get(:dt, 1.0)
+    var = opts |> Keyword.get(:var, 1.0)
+    block_size = opts |> Keyword.get(:block_size, 1)
+    order_by_dim = opts |> Keyword.get(:order_by_dim, true)
+    mtyp = opts |> Keyword.get(:mtyp, :f32)
 
     if !(dim in [2, 3, 4]) do
       raise %ArgumentError{message: "dim must be between 2 and 4"}
@@ -216,7 +222,6 @@ defmodule FilterEx.Utils do
   end
 
 
-  @deprecated
   @doc """
     Given a matrix Q, ordered assuming state space
         [x y z x' y' z' x'' y'' z''...]
@@ -252,7 +257,7 @@ defmodule FilterEx.Utils do
         ix = div(i, dim) * block_size
         iy = rem(i, dim) * block_size
         # dD[ix .. (ix + block_size)][iy .. (iy + block_size)] = f
-        dD |> Nx.put_slice({ix, iy}, f)
+        dD |> Nx.put_slice([ix, iy], f)
     end
   end
 end

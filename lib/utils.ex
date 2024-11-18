@@ -62,7 +62,6 @@ defmodule FilterEx.Utils do
     z
   end
 
-  @deprecated
   @doc """
     Returns the Q matrix for the Discrete Constant White Noise
     Model. dim may be either 2, 3, or 4 dt is the time step, and sigma
@@ -113,6 +112,16 @@ defmodule FilterEx.Utils do
                [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
     ], type: :f32)
 
+    iex> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3, order_by_dim: false)
+    Nx.tensor([
+        [2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0],
+        [0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0],
+        [0.0, 0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4],
+        [5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0, 0.0],
+        [0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0],
+        [0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582]
+    ], type: :f32)
+
     References
     ----------
 
@@ -148,6 +157,7 @@ defmodule FilterEx.Utils do
     end
     |> Nx.tensor(type: mtyp)
 
+    IO.inspect(qQ, label: "q_diag: qq: ")
     if order_by_dim do
       # block_diag(*[qQ]*block_size) * var # wtf python...
       mats = 1..block_size |> Enum.map(fn _ -> qQ end)
@@ -251,9 +261,12 @@ defmodule FilterEx.Utils do
     dD = zeros({nN, nN})
     # qQ = array(qQ)
 
-    for {x, i} <- Enum.with_index(qQ |> ravel()), reduce: dD do
+    qQ! = qQ |> ravel() |> Nx.to_list()
+    IO.inspect(qQ!, label: "order_by_deriv: qq!: ")
+
+    for {x, i} <- Enum.with_index(qQ |> ravel() |> Nx.to_list()), reduce: dD do
       dD ->
-        f = Nx.eye(block_size) * x
+        f = Nx.eye(block_size) |> Nx.multiply(x)
         ix = div(i, dim) * block_size
         iy = rem(i, dim) * block_size
         # dD[ix .. (ix + block_size)][iy .. (iy + block_size)] = f

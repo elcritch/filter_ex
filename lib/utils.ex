@@ -103,15 +103,15 @@ defmodule FilterEx.Utils do
 
     Examples
     --------
-    iex> # constant velocity model in a 3D world with a 10 Hz update rate
-    ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1.0, block_size=3)
-    Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
-               [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
-               [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
-    ], type: :f32)
+    # iex> # constant velocity model in a 3D world with a 10 Hz update rate
+    # ...> FilterEx.Utils.q_discrete_white_noise(2, dt=0.1, var=1.0, block_size=3)
+    # Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
+    #            [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
+    #            [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
+    #            [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
+    #            [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
+    #            [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
+    # ], type: :f32)
 
     References
     ----------
@@ -173,7 +173,7 @@ defmodule FilterEx.Utils do
     IO.inspect(matrices, label: "block_diag:matrices")
     {total_rows, total_cols, {styp, ssz}} =
       for mat <- matrices, reduce: {0, 0, nil} do
-        {rows, cols, typ} ->
+        {rows, cols, _typ} ->
           rows = rows + elem(Nx.shape(mat), 0)
           cols = cols + elem(Nx.shape(mat), 1)
           {rows, cols, Nx.type(mat)}

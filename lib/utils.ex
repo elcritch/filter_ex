@@ -153,37 +153,59 @@ defmodule FilterEx.Utils do
 
   ## Examples
 
-  iex> Nx.tensor([[1, 2, 3], [4, 5, 6]], type: :f32) |> FilterEx.Utils.ravel()
-  Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], type: :f32)
-
+  iex> qQ = Nx.tensor([[1, 2], [3, 4]], type: :f32)
+  ...> matrices = [qQ, qQ, qQ]  # List of matrices to place on the diagonal
+  ...> FilterEx.Utils.block_diag(matrices)
+  Nx.tensor([
+    [1.0, 2.0, 0.0, 0.0, 0.0, 0.0],
+    [3.0, 4.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 2.0, 0.0, 0.0],
+    [0.0, 0.0, 3.0, 4.0, 0.0, 0.0],
+    [0.0, 0.0, 0.0, 0.0, 1.0, 2.0],
+    [0.0, 0.0, 0.0, 0.0, 3.0, 4.0]
+  ], type: :f32)
 
   """
   def block_diag(matrices) when is_list(matrices) do
     # Calculate the total size of the resulting matrix
     {total_rows, total_cols} =
-      Enum.reduce(matrices, {0, 0}, fn mat, {rows, cols} ->
-        {rows + tuple_size(Nx.shape(mat)) |> elem(0), cols + tuple_size(Nx.shape(mat)) |> elem(1)}
-      end)
+      for mat <- matrices, reduce: {0, 0} do
+        {rows, cols} ->
+          rows = rows + elem(Nx.shape(mat), 0)
+          cols = cols + elem(Nx.shape(mat), 1)
+          {rows, cols}
+      end
 
+    IO.inspect({total_rows, total_cols}, label: "TOTAL")
     # Initialize an empty matrix of zeros
     result = Nx.broadcast(0, {total_rows, total_cols})
+    IO.inspect(result, label: "INIT")
 
     # Fill in each block along the diagonal
-    Enum.reduce(matrices, {result, 0, 0}, fn mat, {acc, start_row, start_col} ->
-      {rows, cols} = Nx.shape(mat)
-      updated_matrix =
-        acc
-        |> Nx.slice_along_axis(start_row, rows, axis: 0)
-        |> Nx.slice_along_axis(start_col, cols, axis: 1)
-        |> Nx.add(mat)
+    for mat <- matrices, reduce: {result, 0, 0} do
+      {acc, start_row, start_col} ->
+        {rows, cols} = Nx.shape(mat)
+        updated_matrix =
+          acc
+          |> Nx.put_slice([start_row, start_col], mat)
+          # |> Nx.slice_along_axis(start_row, rows, axis: 0)
+          # |> Nx.slice_along_axis(start_col, cols, axis: 1)
+          # |> Nx.add(mat)
+
+      IO.inspect(updated_matrix, label: "MAT!")
 
       {updated_matrix, start_row + rows, start_col + cols}
-    end)
+    end
     |> elem(0)
   end
 
   @doc """
   Flattens the input tensor into a 1D tensor using Nx.
+
+  ## Examples
+
+  iex> Nx.tensor([[1, 2, 3], [4, 5, 6]], type: :f32) |> FilterEx.Utils.ravel()
+  Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], type: :f32)
   """
   def ravel(tensor) do
     # Get the total number of elements in the tensor

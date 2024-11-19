@@ -8,6 +8,39 @@ defmodule FilterEx.Utils do
     Nx.broadcast(def, {m,n})
   end
 
+  @doc """
+  Convert scalar, list, 1d-tensor to a 2d tensor.
+
+  iex> 1.0 |> FilterEx.Utils.to_tensor_2d()
+  Nx.tensor([[1.0]])
+
+  iex> [1.0, 2.0] |> FilterEx.Utils.to_tensor_2d()
+  Nx.tensor([[1.0], [2.0]])
+
+  iex> [[1.0, 2.0], [3.0, 4.0]] |> FilterEx.Utils.to_tensor_2d()
+  Nx.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+  """
+  def to_tensor_2d(value) do
+    case value do
+      value when is_number(value) ->
+        Nx.tensor([[value]], type: :f32)
+      [] ->
+        raise %ArgumentError{message: "unable to convert tensor shape to 2d"}
+      [v | _] when is_list(value) and (is_number(v) or v == nil or v == :nan or v == :inf or v == :neg_inf) ->
+        Nx.tensor([value], type: :f32)
+        |> Nx.transpose()
+      value when is_list(value) ->
+        Nx.tensor(value, type: :f32)
+      %Nx.Tensor{shape: {_}} ->
+        Nx.tensor([value], type: :f32)
+      %Nx.Tensor{shape: {_, _}} ->
+        value
+      %Nx.Tensor{} ->
+        raise %ArgumentError{message: "unable to convert tensor shape to 2d"}
+    end
+  end
+
   @doc ~s"""
     ensure z is a (dim_z, 1) shaped vector
 

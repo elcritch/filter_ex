@@ -41,6 +41,7 @@ defmodule FilterEx.MixProject do
   defp deps do
     [
       {:nx, "~> 0.9.2"},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 end

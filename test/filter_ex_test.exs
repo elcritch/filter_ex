@@ -3,6 +3,7 @@ defmodule FilterExTest do
   use ExUnit.Case
   # doctest FilterEx
   doctest FilterEx.Utils
+  doctest FilterEx.Kalman
 
   test "kalman test" do
 
@@ -46,14 +47,13 @@ defmodule FilterExTest do
 
     kalman =
       FilterEx.Kalman.new(dim_x: 1, dim_z: 1, dim_u: 1)
-      |> then(& %{&1 |
-        x: Nx.tensor([[20.0]]),       # initial state (location and velocity)
-        fF: Nx.tensor([[1.0]]),    # state transition matrix
-        hH: Nx.tensor([[1.0]]),    # Measurement function
-        pP: &1.pP |> Nx.multiply(1.0),  # covariance matrix
+      |> FilterEx.Kalman.set(
+        x: 20.0,       # initial state (location and velocity)
+        fF: 1.0,    # state transition matrix
+        hH: 1.0,    # Measurement function
         rR: 1.0,                       # state uncertainty
         qQ: 1.0/381.0                  # process uncertainty
-      })
+      )
       |> Kalman.to_eps_adaptive(q_scale_factor: 3.1, eps_max: 1.0)
 
     # IO.inspect(kalman, label: Kalman)
@@ -82,9 +82,7 @@ defmodule FilterExTest do
   def generate_data(state \\ %{}) do
     # ex_unit_seed = ExUnit.configuration()[:seed]
     :rand.seed(:exsss, {1, 2, 3})
-
     n = 80
-    xdata = 1..(2*n) |> Enum.map(&(1.0*&1))
     data_init = 1..n |> Enum.map(fn _ -> 20.0 end)
     data_then = 1..n |> Enum.map(fn _ -> 22.0 end)
     data = data_init ++ data_then
@@ -99,7 +97,6 @@ defmodule FilterExTest do
     state
     |> Map.put(:n, n)
     |> Map.put(:random_data, random_data)
-    |> Map.put(:xdata, xdata)
-    |> Map.put(:ydata, data)
+    |> Map.put(:raw_data, data)
   end
 end

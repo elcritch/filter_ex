@@ -5,6 +5,17 @@ defmodule FilterEx.Kalman do
   import FilterEx.Utils
   alias FilterEx.ExpAverage
 
+  @moduledoc """
+  Kalman filters in pure Elixir with Nx. Supports adaptive feedback to increase
+  responsiveness to external pertubations in the signal.
+
+  ## Examples
+
+  # iex> %{n: n, random_data: random_data} = FilterExTest.generate_data()
+  # ...> 3
+  # 4
+
+  """
   # Kalman Paramters
   defstruct [
     :dim_x,
@@ -56,26 +67,28 @@ defmodule FilterEx.Kalman do
         Default value of 0 indicates it is not used.
   """
 
+  @dims %{rR: :dim_z, fF: :dim_x, qQ: :dim_x, pP: :dim_x}
+
   def new(opts \\ []) do
     dim_x = opts |> Keyword.fetch!(:dim_x)
     dim_z = opts |> Keyword.fetch!(:dim_z)
     dim_u = opts |> Keyword.get(:dim_u, 0.0)
 
-    if dim_x < 1.0, do: raise %ArgumentError{message: "dim_x must be 1 or greater"}
+    if dim_x < 1, do: raise %ArgumentError{message: "dim_x must be 1 or greater"}
     if dim_z < 1, do: raise %ArgumentError{message: "dim_z must be 1 or greater"}
     if dim_u < 0, do: raise %ArgumentError{message: "dim_u must be 0 or greater"}
 
     self = %__MODULE__{
       x: zeros({dim_x, 1}),
+      bB: nil,                             # control transition matrix
       pP: Nx.eye(dim_x, type: :f32),               # uncertainty covariance
       qQ: Nx.eye(dim_x, type: :f32),               # process uncertainty
-      bB: nil,                             # control transition matrix
       fF: Nx.eye(dim_x, type: :f32),               # state transition matrix
-      hH: zeros({dim_z, dim_x}),    # measurement function
       rR: Nx.eye(dim_z, type: :f32),               # measurement uncertainty
-      alpha: 1.0,                      # fading memory control
+      hH: zeros({dim_z, dim_x}),    # measurement function
       mM: zeros({dim_x, dim_z}),    # process-measurement cross correlation
-      z: Nx.broadcast(:nan, {dim_z, 1}),
+      alpha: 1.0,                      # fading memory control
+      z: Nx.broadcast(:nan, {dim_z, 1}), # reading / input
 
       kK: zeros({dim_x, dim_z}), # kalman gain
       y: zeros({dim_z, 1}),
@@ -96,6 +109,25 @@ defmodule FilterEx.Kalman do
     }
 
     self
+  end
+
+  def set(self, values) when is_struct(self, __MODULE__) do
+    for {field, val} <- values, reduce: self do
+      self ->
+        cond do
+          field in [:x, :z, :hH] ->
+            %{self | field => val |> to_tensor_2d}
+          field in [:rR, :qQ, :pP, :fF] ->
+            val =
+              case val do
+                val when is_number(val) ->
+                  dim = @dims |> Map.fetch!(field)
+                  Nx.eye(self |> Map.get(dim), type: :f32) |> Nx.multiply(val)
+                %Nx.Tensor{} -> val
+              end
+            %{self | field => val |> to_tensor_2d}
+        end
+    end
   end
 
   def to_eps_adaptive(self, opts) when is_struct(self, __MODULE__) do
@@ -127,12 +159,25 @@ defmodule FilterEx.Kalman do
         count: 0
     }}
   end
-  def residual(self) when is_struct(__MODULE__, self) do
+
+  def residual(self) when is_struct(self, __MODULE__) do
     self.y
   end
 
-  def estimate(self) when is_struct(__MODULE__, self) do
+  def estimate(self) when is_struct(self, __MODULE__) do
     self.x
+  end
+
+  @doc """
+  Set the estimate for the Kalman filter.
+
+  # iex> kalman = FilterEx.Kalman.new(dim_x: 1, dim_z: 1, dim_u: 1)
+  # ...> kalman |> FilterEx.Kalman.estimate!(3.3)
+  # %FilterEx.Kalman{x: Nx.tensor([[3.3]])}
+
+  """
+  def estimate!(self, value) when is_struct(self, __MODULE__) do
+    %{self | x: value |> to_tensor_2d()}
   end
 
   @doc """

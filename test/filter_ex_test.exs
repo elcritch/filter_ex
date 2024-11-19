@@ -79,10 +79,10 @@ defmodule FilterExTest do
     assert_in_delta n2a, 29.0, 0.9
   end
 
-  def generate_data(state \\ %{}) do
+  def generate_data(n \\ 80) do
+    state = %{}
     # ex_unit_seed = ExUnit.configuration()[:seed]
     :rand.seed(:exsss, {1, 2, 3})
-    n = 80
     data_init = 1..n |> Enum.map(fn _ -> 20.0 end)
     data_then = 1..n |> Enum.map(fn _ -> 22.0 end)
     data = data_init ++ data_then

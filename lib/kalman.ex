@@ -11,9 +11,21 @@ defmodule FilterEx.Kalman do
 
   ## Examples
 
-  # iex> %{n: n, random_data: random_data} = FilterExTest.generate_data()
-  # ...> 3
-  # 4
+  iex> %{random_data: random_data} = FilterExTest.generate_data(3)
+  ...> kalman = FilterEx.Kalman.new(dim_x: 1, dim_z: 1, dim_u: 1)
+  ...> kalman = kalman |> FilterEx.Kalman.set(
+  ...>  x: 20.0,       # initial state (location and velocity)
+  ...>  fF: 1.0,    # state transition matrix
+  ...>  hH: 1.0,    # Measurement function
+  ...>  rR: 1.0,                       # state uncertainty
+  ...>  qQ: 1.0/10.0                  # process uncertainty
+  ...> )
+  ...> kalman = kalman |> Kalman.to_eps_adaptive(
+  ...>   q_scale_factor: 3.1, eps_max: 1.0
+  ...> )
+  ...> {_kalman, %{estimates: estimates}} = kalman |> FilterEx.Kalman.filter(random_data)
+  ...> estimates
+  [20.124313354492188, 20.044675827026367, 20.06612205505371, 23.02187156677246, 25.700191497802734, 28.752626419067383]
 
   """
   # Kalman Paramters

@@ -191,9 +191,10 @@ defmodule FilterEx.Kalman do
   @doc """
   Set the estimate for the Kalman filter.
 
-  # iex> kalman = FilterEx.Kalman.new(dim_x: 1, dim_z: 1, dim_u: 1)
-  # ...> kalman |> FilterEx.Kalman.estimate!(3.3)
-  # %FilterEx.Kalman{x: Nx.tensor([[3.3]])}
+      iex> kalman = FilterEx.Kalman.new(dim_x: 1, dim_z: 1, dim_u: 1)
+      ...> kalman = kalman |> FilterEx.Kalman.estimate!(3.3)
+      ...> kalman |> FilterEx.Kalman.estimate()
+      Nx.tensor([[3.3]])
 
   """
   def estimate!(self, value) when is_struct(self, __MODULE__) do

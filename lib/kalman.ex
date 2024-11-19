@@ -13,9 +13,9 @@ defmodule FilterEx.Kalman do
 
   Generate example data which jumps up midway from 20 to 30.
 
-  iex> %{random_data: random_data} = FilterExTest.generate_data(3)
-  ...> random_data
-  [20.237325241821775, 19.917010488673977, 20.11041356431258, 29.95666616025292, 30.099203428410778, 30.079518640113378]
+      iex> %{random_data: random_data} = FilterExTest.generate_data(3)
+      ...> random_data
+      [20.237325241821775, 19.917010488673977, 20.11041356431258, 29.95666616025292, 30.099203428410778, 30.079518640113378]
 
   Create a Kalman filter with adaptive gain.
 

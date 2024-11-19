@@ -270,4 +270,21 @@ defmodule FilterEx.Utils do
         dD |> Nx.put_slice([ix, iy], f)
     end
   end
+
+  @doc """
+  Get scalar number from a 1, 2, or 3 dimension tensor from zeroth index.
+
+  """
+  def to_scalar(mat) do
+    case mat |> Nx.shape() do
+      {_n} ->
+        mat[0]
+      {_m, _n} ->
+        mat[0][0]
+      {_m, _n, _o} ->
+        mat[0][0][0]
+    end
+    > Nx.to_number()
+  end
+
 end

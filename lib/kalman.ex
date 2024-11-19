@@ -34,6 +34,7 @@ defmodule FilterEx.Kalman do
     :x_post,
     :pP_post,
 
+    :eps_ad,
   ]
 
   @doc """
@@ -89,10 +90,31 @@ defmodule FilterEx.Kalman do
       x_prior: self.x |> Nx.backend_copy(),
       pP_prior: self.pP |> Nx.backend_copy(),
       x_post: self.x |> Nx.backend_copy(),
-      pP_post: self.pP |> Nx.backend_copy()
+      pP_post: self.pP |> Nx.backend_copy(),
     }
 
     self
+  end
+
+  def to_eps_adaptive(self, opts) when is_struct(__MODULE__, self) do
+    q_scale_factor = opts |> Keyword.fetch!(:q_scale_factor)
+    eps_max = opts |> Keyword.fetch!(:eps_max)
+    eps_alpha = opts |> Keyword.get(:eps_alpha, 0.9)
+
+    %{self | eps_ad: %{
+        eps_filter: %ExpAverage{alpha: eps_alpha, value: 0},
+        q_scale_factor: q_scale_factor,
+        eps_max: eps_max,
+        count: 0
+    }}
+  end
+
+  def residual(self) when is_struct(__MODULE__, self) do
+    self.y
+  end
+
+  def value(self) when is_struct(__MODULE__, self) do
+    self.x
   end
 
   @doc """
@@ -249,63 +271,61 @@ defmodule FilterEx.Kalman do
     self
   end
 
-  def adaptive_eps_update_1d(self, z, opts) when is_struct(self, __MODULE__) do
-    q_scale_factor = opts |> Keyword.fetch!(:q_scale_factor)
-    eps_max = opts |> Keyword.fetch!(:eps_max)
-    eps_alpha = opts |> Keyword.get(:eps_alpha, 0.9)
+  def adaptive_eps_update_1d(self, z) when is_struct(self, __MODULE__) do
+    %{q_scale_factor: q_scale_factor,
+      eps_filter: eps_filter,
+      count: count,
+      eps_max: eps_max} = self.eps_ad
 
-    exp_filter = %ExpAverage{alpha: eps_alpha, value: 0}
+    # perform kalman filtering
+    ak = self |> predict() |> update(z)
 
-    {ak, ak_est, ak_res, ak_eps, _exp_filter, qvals, _count} =
-      for zz <- z, reduce: {self, [], [], [], exp_filter, [], 0} do
-        {ak, results, ak_res, ak_eps, exp_filter, qvals, count} ->
+    # y, S = cvfilter.y, cvfilter.S
+    # eps = y.T @ inv(S) @ y
+    # epss.append(eps)
+    eps =
+      Nx.transpose(ak.y)
+      |> Nx.tensor(names: nil)
+      |> Nx.dot(Nx.LinAlg.invert(ak.sS))
+      |> Nx.dot(ak.y)
+      |> then(&to_scalar/1)
+
+    {eps_filter, eps} = eps_filter |> ExpAverage.update(eps)
+
+    # next try continuous std-dev based adjustments
+    {ak, count} =
+      cond do
+        eps > eps_max ->
+          count = count + 1
+          ak = %{ak | qQ: ak.qQ |> Nx.multiply(q_scale_factor * count) }
+          # Logger.debug("increase Q! #{inspect([count: count, eps: eps, qq: ak.qQ[0][0] |> Nx.to_number])}")
+          {ak, count}
+        count > 0 ->
+          # Logger.debug("decrease Q! #{inspect([count: count, eps: eps, qq: ak.qQ[0][0] |> Nx.to_number])}")
+          ak = %{ak | qQ: ak.qQ |> Nx.divide(q_scale_factor * count) }
+          {ak, count - 1}
+        true ->
+          {ak, count}
+      end
+
+    %{ak | eps_ad: %{self.eps_ad | eps_filter: eps_filter, count: count, eps: eps}}
+  end
+
+  def adaptive_eps_update_1d(self, zz) when is_list(zz) and is_struct(self, __MODULE__) do
+
+    {ak, ak_est, ak_res, ak_eps, qvals} =
+      for z <- zz, reduce: {self, [], [], [], []} do
+        {ak, results, ak_res, ak_eps, qvals} ->
             # perform kalman filtering
-            ak = ak |> predict() |> update(zz)
+            ak = ak |> predict() |> update(z)
 
             # save data
-            results = [ ak.x[0][0] |> Nx.to_number() | results ]
-            ak_res = [ ak.y[0][0] |> Nx.to_number() | ak_res ]
+            results = [ ak.x |> to_scalar | results ]
+            ak_res = [ ak.y |> to_scalar | ak_res ]
+            ak_eps = [ ak.eps_ad.eps | ak_eps ]
+            qvals = [ ak.qQ |> to_scalar | qvals ]
 
-            # y, S = cvfilter.y, cvfilter.S
-            # eps = y.T @ inv(S) @ y
-            # epss.append(eps)
-            eps =
-              Nx.transpose(ak.y)
-              |> Nx.tensor(names: nil)
-              |> Nx.dot(Nx.LinAlg.invert(ak.sS))
-              |> Nx.dot(ak.y)
-              # |> Nx.abs()
-              # |> Nx.add(0.1)
-              # |> Nx.log()
-              |> then(& &1[0][0] |> Nx.to_number())
-
-            exp_filter = exp_filter |> ExpAverage.update(eps)
-            eps = exp_filter.value
-
-            # ak_eps |> Enum.take(3)
-            ak_eps = [ eps | ak_eps ]
-
-            # next try continuous std-dev based adjustments
-            {ak, count} =
-              cond do
-                eps > eps_max ->
-                  count = count + 1
-                  ak = %{ak | qQ: ak.qQ |> Nx.multiply(q_scale_factor * count) }
-                  # Logger.debug("increase Q! #{inspect([count: count, eps: eps, qq: ak.qQ[0][0] |> Nx.to_number])}")
-                  {ak, count}
-                # eps > eps_max ->
-                #   {ak, count + 1}
-                count > 0 ->
-                  # Logger.debug("decrease Q! #{inspect([count: count, eps: eps, qq: ak.qQ[0][0] |> Nx.to_number])}")
-                  ak = %{ak | qQ: ak.qQ |> Nx.divide(q_scale_factor * count) }
-                  {ak, count - 1}
-                true ->
-                  {ak, count}
-              end
-
-            qvals = [ ak.qQ[0][0] |> Nx.to_number | qvals ]
-
-            {ak, results, ak_res, ak_eps, exp_filter, qvals, count}
+            {ak, results, ak_res, ak_eps, qvals}
         end
 
     {ak, %{estimates: ak_est |> Enum.reverse(),

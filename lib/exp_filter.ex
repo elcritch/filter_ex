@@ -7,7 +7,8 @@ defmodule FilterEx.ExpAverage do
     ]
 
     def update(self, y) when is_number(y) and is_struct(self, __MODULE__) do
-      %{self | value: self.value + self.alpha * (y - self.value)}
+      self = %{self | value: self.value + self.alpha * (y - self.value)}
+      {self, self.value}
     end
 
     def update(self, value) when is_list(value) and is_struct(self, __MODULE__) do

@@ -1,6 +1,10 @@
 # FilterEx
 
-**TODO: Add description**
+Some basic filters implemented in Elixir with Nx. Currently only Kalman, Adaptive Kalman, and exponential moving filters are implemented.
+
+The Kalman filter is based on a port of the excellent [filterpy](https://github.com/rlabbe/filterpy) library. It's only a partial port. Furthermore it's really only been tested on 1D, but should in theory work on higher dim Kalman's as well. PR's welcome!
+
+Checkout @rlabbe's excellent book [Kalman and Bayesian Filters in Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python). The derivation of Kalman filters from Gaussians is a handy. 
 
 ## Installation
 

@@ -284,7 +284,7 @@ defmodule FilterEx.Utils do
       {_m, _n, _o} ->
         mat[0][0][0]
     end
-    > Nx.to_number()
+    |> Nx.to_number()
   end
 
 end

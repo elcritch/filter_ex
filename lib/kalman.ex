@@ -404,13 +404,13 @@ defmodule FilterEx.Kalman do
         # Nx.abs(ak.y[0]) |> Nx.greater(std |> Nx.multiply(std_scale)) ->
         resid > scaled_std ->
           phi = phi + q_scale_factor
-          ak = %{self | qQ: self.qQ |> Nx.add(1/q_scale_factor)}
+          self = %{self | qQ: self.qQ |> Nx.add(1/q_scale_factor)}
           # Logger.info("Increase: #{inspect(ak.qQ |> Nx.to_number)}")
           # ak.qQ = q_discrete_white_noise(2, dt, phi)
-          {ak, phi, count + 1}
+          {self, phi, count + 1}
         count > 0 ->
           phi = phi - q_scale_factor
-          ak = %{self | qQ: self.qQ |> Nx.subtract(1/q_scale_factor)}
+          self = %{self | qQ: self.qQ |> Nx.subtract(1/q_scale_factor)}
           # ak.qQ = q_discrete_white_noise(2, dt, phi)
           # Logger.info("Decrease: #{inspect(ak.qQ)}")
           {self, phi, count - 1}

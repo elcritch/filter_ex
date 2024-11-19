@@ -25,7 +25,7 @@ defmodule FilterEx.MixProject do
     [
       files: ["lib", "mix.exs", "README*", "LICENSE*", "test"],
       maintainers: ["Jaremy Creechley"],
-      licenses: ["Apache-2.0"],
+      licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/elcritch/filter_ex"}
     ]
   end

@@ -262,7 +262,7 @@ defmodule FilterEx.Utils do
     # qQ = array(qQ)
 
     qQ! = qQ |> ravel() |> Nx.to_list()
-    IO.inspect(qQ!, label: "order_by_deriv: qq!: ")
+    # IO.inspect(qQ!, label: "order_by_deriv: qq!: ")
 
     for {x, i} <- Enum.with_index(qQ |> ravel() |> Nx.to_list()), reduce: dD do
       dD ->

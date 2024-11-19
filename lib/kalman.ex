@@ -288,9 +288,10 @@ defmodule FilterEx.Kalman do
     self
   end
 
-  def filter(self, zz, kind, opts \\ []) when is_list(zz) and is_struct(self, __MODULE__) do
+  def filter(self, zz, opts \\ []) when is_list(zz) and is_struct(self, __MODULE__) do
     debug = opts |> Keyword.get(:debug, false)
-    scalar = opts |> Keyword.get(:scalar, false)
+    scalar = opts |> Keyword.get(:scalar, true)
+    kind = opts |> Keyword.get(:kind, :normal)
 
     getter = if scalar do &to_scalar/1 else fn x -> x end end
 
@@ -300,6 +301,9 @@ defmodule FilterEx.Kalman do
             # perform kalman filtering
           {ak, filter_params} =
             case kind do
+              :normal ->
+                ak = self |> predict() |> update(z)
+                {ak, filter_params}
               :adaptive_eps ->
                 ak = ak |> adaptive_eps(z)
                 {ak, debug && [ ak.adaptive | filter_params ]}

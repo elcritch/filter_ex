@@ -4,8 +4,8 @@ defmodule FilterEx.Utils do
     Nx.transpose(x)
   end
 
-  def zeros({m,n}) do
-    Nx.broadcast(0.0, {m,n})
+  def zeros({m,n}, def \\ 0.0) do
+    Nx.broadcast(def, {m,n})
   end
 
   @doc ~s"""

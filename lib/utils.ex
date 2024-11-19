@@ -46,23 +46,23 @@ defmodule FilterEx.Utils do
 
     ## Examples
 
-      iex> FilterEx.Utils.reshape_z(3.0, 1, 1)
-      Nx.tensor([ 3.0 ], names: [:x])
+        iex> FilterEx.Utils.reshape_z(3.0, 1, 1)
+        Nx.tensor([ 3.0 ], names: [:x])
 
-      iex> FilterEx.Utils.reshape_z(3.0, 1, 2)
-      Nx.tensor([[ 3.0 ]], names: [:x, :y])
+        iex> FilterEx.Utils.reshape_z(3.0, 1, 2)
+        Nx.tensor([[ 3.0 ]], names: [:x, :y])
 
-      iex> FilterEx.Utils.reshape_z([3.0], 1, 1)
-      Nx.tensor([ 3.0 ], names: [:x])
+        iex> FilterEx.Utils.reshape_z([3.0], 1, 1)
+        Nx.tensor([ 3.0 ], names: [:x])
 
-      iex> FilterEx.Utils.reshape_z([3.0], 1, 2)
-      Nx.tensor([[3.0]], names: [:x, :y])
+        iex> FilterEx.Utils.reshape_z([3.0], 1, 2)
+        Nx.tensor([[3.0]], names: [:x, :y])
 
-      iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 1)
-      Nx.tensor([3.0, 2.0], names: [:x])
+        iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 1)
+        Nx.tensor([3.0, 2.0], names: [:x])
 
-      iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 2)
-      Nx.tensor([[3.0], [2.0]], names: [:x, :y])
+        iex> FilterEx.Utils.reshape_z([3.0,2.0], 2, 2)
+        Nx.tensor([[3.0], [2.0]], names: [:x, :y])
 
   """
   def reshape_z(z, dim_z, ndim) do
@@ -135,25 +135,25 @@ defmodule FilterEx.Utils do
 
     Examples
     --------
-    iex> # constant velocity model in a 3D world with a 10 Hz update rate
-    ...> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3)
-    Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
-               [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
-               [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
-               [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
-    ], type: :f32)
+        iex> # constant velocity model in a 3D world with a 10 Hz update rate
+        ...> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3)
+        Nx.tensor([[0.000025, 0.0005  , 0.0      , 0.0      , 0.0      , 0.0      ],
+                  [0.0005  , 0.01    , 0.0      , 0.0      , 0.0      , 0.0      ],
+                  [0.0      , 0.0      , 0.000025, 0.0005  , 0.0      , 0.0      ],
+                  [0.0      , 0.0      , 0.0005  , 0.01    , 0.0      , 0.0      ],
+                  [0.0      , 0.0      , 0.0      , 0.0      , 0.000025, 0.0005  ],
+                  [0.0      , 0.0      , 0.0      , 0.0      , 0.0005  , 0.01    ]
+        ], type: :f32)
 
-    iex> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3, order_by_dim: false)
-    Nx.tensor([
-        [2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0],
-        [0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0],
-        [0.0, 0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4],
-        [5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0, 0.0],
-        [0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0],
-        [0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582]
-    ], type: :f32)
+        iex> FilterEx.Utils.q_discrete_white_noise(2, dt: 0.1, var: 1.0, block_size: 3, order_by_dim: false)
+        Nx.tensor([
+            [2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0],
+            [0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4, 0.0],
+            [0.0, 0.0, 2.499999936844688e-5, 0.0, 0.0, 5.000000237487257e-4],
+            [5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0, 0.0],
+            [0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582, 0.0],
+            [0.0, 0.0, 5.000000237487257e-4, 0.0, 0.0, 0.009999999776482582]
+        ], type: :f32)
 
     References
     ----------
@@ -205,17 +205,17 @@ defmodule FilterEx.Utils do
 
   ## Examples
 
-  iex> qQ = Nx.tensor([[1, 2], [3, 4]], type: :f32)
-  ...> matrices = [qQ, qQ, qQ]  # List of matrices to place on the diagonal
-  ...> FilterEx.Utils.block_diag(matrices)
-  Nx.tensor([
-    [1.0, 2.0, 0.0, 0.0, 0.0, 0.0],
-    [3.0, 4.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0, 2.0, 0.0, 0.0],
-    [0.0, 0.0, 3.0, 4.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 1.0, 2.0],
-    [0.0, 0.0, 0.0, 0.0, 3.0, 4.0]
-  ], type: :f32)
+      iex> qQ = Nx.tensor([[1, 2], [3, 4]], type: :f32)
+      ...> matrices = [qQ, qQ, qQ]  # List of matrices to place on the diagonal
+      ...> FilterEx.Utils.block_diag(matrices)
+      Nx.tensor([
+        [1.0, 2.0, 0.0, 0.0, 0.0, 0.0],
+        [3.0, 4.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 2.0, 0.0, 0.0],
+        [0.0, 0.0, 3.0, 4.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 1.0, 2.0],
+        [0.0, 0.0, 0.0, 0.0, 3.0, 4.0]
+      ], type: :f32)
 
   """
   def block_diag(matrices) when is_list(matrices) do
@@ -253,8 +253,9 @@ defmodule FilterEx.Utils do
 
   ## Examples
 
-  iex> Nx.tensor([[1, 2, 3], [4, 5, 6]], type: :f32) |> FilterEx.Utils.ravel()
-  Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], type: :f32)
+      iex> Nx.tensor([[1, 2, 3], [4, 5, 6]], type: :f32) |> FilterEx.Utils.ravel()
+      Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], type: :f32)
+
   """
   def ravel(tensor) do
     # Get the total number of elements in the tensor

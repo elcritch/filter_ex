@@ -113,7 +113,7 @@ defmodule FilterEx.Kalman do
     self.y
   end
 
-  def value(self) when is_struct(__MODULE__, self) do
+  def estimate(self) when is_struct(__MODULE__, self) do
     self.x
   end
 
@@ -292,7 +292,7 @@ defmodule FilterEx.Kalman do
 
     {eps_filter, eps} = eps_filter |> ExpAverage.update(eps)
 
-    # next try continuous std-dev based adjustments
+    # calculate revised Q factor based on eps threshold
     {ak, count} =
       cond do
         eps > eps_max ->
@@ -311,27 +311,38 @@ defmodule FilterEx.Kalman do
     %{ak | eps_ad: %{self.eps_ad | eps_filter: eps_filter, count: count, eps: eps}}
   end
 
-  def adaptive_eps_update_1d(self, zz) when is_list(zz) and is_struct(self, __MODULE__) do
+  def adaptive_eps_update_1d(self, zz, debug \\ false) when is_list(zz) and is_struct(self, __MODULE__) do
 
     {ak, ak_est, ak_res, ak_eps, qvals} =
       for z <- zz, reduce: {self, [], [], [], []} do
-        {ak, results, ak_res, ak_eps, qvals} ->
+        {ak, ak_est, ak_res, ak_eps, qvals} ->
             # perform kalman filtering
             ak = ak |> adaptive_eps_update_1d(z)
 
             # save data
-            results = [ ak.x |> to_scalar | results ]
-            ak_res = [ ak.y |> to_scalar | ak_res ]
-            ak_eps = [ ak.eps_ad.eps | ak_eps ]
-            qvals = [ ak.qQ |> to_scalar | qvals ]
+            ak_est = [ ak.x |> to_scalar | ak_est ]
 
-            {ak, results, ak_res, ak_eps, qvals}
+            if debug do
+              ak_res = [ ak.y |> to_scalar | ak_res ]
+              qvals = [ ak.qQ |> to_scalar | qvals ]
+              ak_eps = [ ak.eps_ad | ak_eps ]
+              {ak, ak_est, ak_res, ak_eps, qvals}
+            else
+              {ak, ak_est, [], [], []}
+            end
         end
 
-    {ak, %{estimates: ak_est |> Enum.reverse(),
-           eps: ak_eps |> Enum.reverse(),
-           qvals: qvals |> Enum.reverse(),
-           residuals: ak_res |> Enum.reverse()}}
+    results =
+      if debug do
+        %{estimates: ak_est |> Enum.reverse(),
+          eps: ak_eps |> Enum.reverse(),
+          qvals: qvals |> Enum.reverse(),
+          residuals: ak_res |> Enum.reverse()}
+      else
+        %{estimates: ak_est |> Enum.reverse()}
+      end
+
+    {ak, results}
   end
 
   def adaptive_zarchan_update_1d(self, z, opts) when is_struct(self, __MODULE__) do

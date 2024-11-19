@@ -157,7 +157,7 @@ defmodule FilterEx.Utils do
     end
     |> Nx.tensor(type: mtyp)
 
-    IO.inspect(qQ, label: "q_diag: qq: ")
+    # IO.inspect(qQ, label: "q_diag: qq: ")
     if order_by_dim do
       # block_diag(*[qQ]*block_size) * var # wtf python...
       mats = 1..block_size |> Enum.map(fn _ -> qQ end)

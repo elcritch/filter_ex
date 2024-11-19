@@ -377,7 +377,7 @@ defmodule FilterEx.Kalman do
     %{ak | adaptive: %{self.adaptive | eps_filter: eps_filter, count: count, eps: eps}}
   end
 
-  def adaptive_eps(self, z) when is_struct(self, __MODULE__) do
+  def adaptive_stddev(self, z) when is_struct(self, __MODULE__) do
     unless self.eps_ad do
       raise %ArgumentError{message: "must setup eps adaptive using `to_eps_adaptive`"}
     end

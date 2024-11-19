@@ -4,6 +4,7 @@ defmodule FilterExTest do
   # doctest FilterEx
   doctest FilterEx.Utils
   doctest FilterEx.Kalman
+  doctest FilterEx.ExpAverage
 
   test "kalman test" do
 

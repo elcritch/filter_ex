@@ -302,7 +302,7 @@ defmodule FilterEx.Kalman do
           {ak, filter_params} =
             case kind do
               :normal ->
-                ak = self |> predict() |> update(z)
+                ak = ak |> predict() |> update(z)
                 {ak, filter_params}
               :adaptive_eps ->
                 ak = ak |> adaptive_eps(z)

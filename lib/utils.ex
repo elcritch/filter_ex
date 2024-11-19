@@ -277,6 +277,8 @@ defmodule FilterEx.Utils do
   """
   def to_scalar(mat) do
     case mat |> Nx.shape() do
+      {} ->
+        mat
       {_n} ->
         mat[0]
       {_m, _n} ->

@@ -109,6 +109,7 @@ defmodule FilterEx.Kalman do
         eps_filter: %ExpAverage{alpha: eps_alpha, value: 0},
         q_scale_factor: q_scale_factor,
         eps_max: eps_max,
+        eps: nil,
         count: 0
       }
     }
@@ -291,7 +292,6 @@ defmodule FilterEx.Kalman do
   def filter(self, zz, opts \\ []) when is_list(zz) and is_struct(self, __MODULE__) do
     debug = opts |> Keyword.get(:debug, false)
     scalar = opts |> Keyword.get(:scalar, true)
-    kind = opts |> Keyword.get(:kind, :normal)
 
     getter = if scalar do &to_scalar/1 else fn x -> x end end
 
@@ -300,8 +300,8 @@ defmodule FilterEx.Kalman do
         {ak, ak_est, ak_res, filter_params, qvals} ->
             # perform kalman filtering
           {ak, filter_params} =
-            case kind do
-              :normal ->
+            case self.kind do
+              :regular ->
                 ak = ak |> predict() |> update(z)
                 {ak, filter_params}
               :adaptive_eps ->
@@ -338,7 +338,7 @@ defmodule FilterEx.Kalman do
   end
 
   def adaptive_eps(self, z) when is_struct(self, __MODULE__) do
-    unless self.eps_ad do
+    unless self.adaptive && self.kind == :adaptive_eps do
       raise %ArgumentError{message: "must setup eps adaptive using `to_eps_adaptive`"}
     end
 

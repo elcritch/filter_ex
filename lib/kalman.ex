@@ -317,7 +317,7 @@ defmodule FilterEx.Kalman do
       for z <- zz, reduce: {self, [], [], [], []} do
         {ak, results, ak_res, ak_eps, qvals} ->
             # perform kalman filtering
-            ak = ak |> predict() |> update(z)
+            ak = ak |> adaptive_eps_update_1d(z)
 
             # save data
             results = [ ak.x |> to_scalar | results ]

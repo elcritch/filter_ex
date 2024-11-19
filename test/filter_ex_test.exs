@@ -75,8 +75,8 @@ defmodule FilterExTest do
     # IO.inspect(n2a, label: Kalman.Results.N2A, limit: :infinity)
     assert_in_delta n1, 20.0, 0.9
     assert_in_delta n2, 30.0, 0.9
+    # see we get a value much closer to the second average very quickly!
     assert_in_delta n2a, 29.0, 0.9
-
   end
 
   def generate_data(state \\ %{}) do

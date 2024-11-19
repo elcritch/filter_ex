@@ -34,7 +34,8 @@ defmodule FilterEx.Kalman do
     :x_post,
     :pP_post,
 
-    :eps_ad,
+    :kind,
+    :adaptive,
   ]
 
   @doc """
@@ -91,24 +92,40 @@ defmodule FilterEx.Kalman do
       pP_prior: self.pP |> Nx.backend_copy(),
       x_post: self.x |> Nx.backend_copy(),
       pP_post: self.pP |> Nx.backend_copy(),
+      kind: :regular
     }
 
     self
   end
 
-  def to_eps_adaptive(self, opts) when is_struct(__MODULE__, self) do
+  def to_eps_adaptive(self, opts) when is_struct(self, __MODULE__) do
     q_scale_factor = opts |> Keyword.fetch!(:q_scale_factor)
     eps_max = opts |> Keyword.fetch!(:eps_max)
     eps_alpha = opts |> Keyword.get(:eps_alpha, 0.9)
 
-    %{self | eps_ad: %{
+    %{self |
+      kind: :adaptive_eps,
+      adaptive: %{
+        eps_filter: %ExpAverage{alpha: eps_alpha, value: 0},
+        q_scale_factor: q_scale_factor,
+        eps_max: eps_max,
+        count: 0
+      }
+    }
+  end
+
+  def to_stddev_adaptive(self, opts) when is_struct(self, __MODULE__) do
+    q_scale_factor = opts |> Keyword.fetch!(:q_scale_factor)
+    eps_max = opts |> Keyword.fetch!(:eps_max)
+    eps_alpha = opts |> Keyword.get(:eps_alpha, 0.9)
+
+    %{self | stddev_ad: %{
         eps_filter: %ExpAverage{alpha: eps_alpha, value: 0},
         q_scale_factor: q_scale_factor,
         eps_max: eps_max,
         count: 0
     }}
   end
-
   def residual(self) when is_struct(__MODULE__, self) do
     self.y
   end
@@ -271,11 +288,60 @@ defmodule FilterEx.Kalman do
     self
   end
 
-  def adaptive_eps_update_1d(self, z) when is_struct(self, __MODULE__) do
+  def filter(self, zz, kind, opts \\ []) when is_list(zz) and is_struct(self, __MODULE__) do
+    debug = opts |> Keyword.get(:debug, false)
+    scalar = opts |> Keyword.get(:scalar, false)
+
+    getter = if scalar do &to_scalar/1 else fn x -> x end end
+
+    {ak, ak_est, ak_res, filter_params, qvals} =
+      for z <- zz, reduce: {self, [], [], [], []} do
+        {ak, ak_est, ak_res, filter_params, qvals} ->
+            # perform kalman filtering
+          {ak, filter_params} =
+            case kind do
+              :adaptive_eps ->
+                ak = ak |> adaptive_eps(z)
+                {ak, debug && [ ak.adaptive | filter_params ]}
+              :adaptive_stddev ->
+                ak = ak |> adaptive_stddev(z)
+                {ak, debug && [ ak.adaptive | filter_params ]}
+            end
+
+          # save data
+          ak_est = [ ak.x |> getter.() | ak_est ]
+
+          if debug do
+            ak_res = [ ak.y |> getter.() | ak_res ]
+            qvals = [ ak.qQ |> getter.() | qvals ]
+            {ak, ak_est, ak_res, filter_params, qvals}
+          else
+            {ak, ak_est, [], [], []}
+          end
+        end
+
+    results =
+      if debug do
+        %{estimates: ak_est |> Enum.reverse(),
+          filter_params: filter_params |> Enum.reverse(),
+          qvals: qvals |> Enum.reverse(),
+          residuals: ak_res |> Enum.reverse()}
+      else
+        %{estimates: ak_est |> Enum.reverse()}
+      end
+
+    {ak, results}
+  end
+
+  def adaptive_eps(self, z) when is_struct(self, __MODULE__) do
+    unless self.eps_ad do
+      raise %ArgumentError{message: "must setup eps adaptive using `to_eps_adaptive`"}
+    end
+
     %{q_scale_factor: q_scale_factor,
       eps_filter: eps_filter,
       count: count,
-      eps_max: eps_max} = self.eps_ad
+      eps_max: eps_max} = self.adaptive
 
     # perform kalman filtering
     ak = self |> predict() |> update(z)
@@ -308,90 +374,52 @@ defmodule FilterEx.Kalman do
           {ak, count}
       end
 
-    %{ak | eps_ad: %{self.eps_ad | eps_filter: eps_filter, count: count, eps: eps}}
+    %{ak | adaptive: %{self.adaptive | eps_filter: eps_filter, count: count, eps: eps}}
   end
 
-  def adaptive_eps_update_1d(self, zz, debug \\ false) when is_list(zz) and is_struct(self, __MODULE__) do
+  def adaptive_eps(self, z) when is_struct(self, __MODULE__) do
+    unless self.eps_ad do
+      raise %ArgumentError{message: "must setup eps adaptive using `to_eps_adaptive`"}
+    end
 
-    {ak, ak_est, ak_res, ak_eps, qvals} =
-      for z <- zz, reduce: {self, [], [], [], []} do
-        {ak, ak_est, ak_res, ak_eps, qvals} ->
-            # perform kalman filtering
-            ak = ak |> adaptive_eps_update_1d(z)
+    %{q_scale_factor: q_scale_factor,
+      std_scale: std_scale,
+      count: count,
+      phi: phi} = self.adaptive
 
-            # save data
-            ak_est = [ ak.x |> to_scalar | ak_est ]
 
-            if debug do
-              ak_res = [ ak.y |> to_scalar | ak_res ]
-              qvals = [ ak.qQ |> to_scalar | qvals ]
-              ak_eps = [ ak.eps_ad | ak_eps ]
-              {ak, ak_est, ak_res, ak_eps, qvals}
-            else
-              {ak, ak_est, [], [], []}
-            end
-        end
+    # perform kalman filtering
+    self = self |> predict() |> update(z)
 
-    results =
-      if debug do
-        %{estimates: ak_est |> Enum.reverse(),
-          eps: ak_eps |> Enum.reverse(),
-          qvals: qvals |> Enum.reverse(),
-          residuals: ak_res |> Enum.reverse()}
-      else
-        %{estimates: ak_est |> Enum.reverse()}
+    # y, S = cvfilter.y, cvfilter.S
+    std = Nx.sqrt(self.sS)
+    # next try continuous std-dev based adjustments
+    resid = abs(self.y |> to_scalar)
+    scaled_std = to_scalar(std) * std_scale
+
+    # Logger.info("StdCheck: #{inspect({resid, scaled_std})}")
+
+    {ak, phi, count} =
+      cond do
+        # Nx.abs(ak.y[0]) |> Nx.greater(std |> Nx.multiply(std_scale)) ->
+        resid > scaled_std ->
+          phi = phi + q_scale_factor
+          ak = %{self | qQ: self.qQ |> Nx.add(1/q_scale_factor)}
+          # Logger.info("Increase: #{inspect(ak.qQ |> Nx.to_number)}")
+          # ak.qQ = q_discrete_white_noise(2, dt, phi)
+          {ak, phi, count + 1}
+        count > 0 ->
+          phi = phi - q_scale_factor
+          ak = %{self | qQ: self.qQ |> Nx.subtract(1/q_scale_factor)}
+          # ak.qQ = q_discrete_white_noise(2, dt, phi)
+          # Logger.info("Decrease: #{inspect(ak.qQ)}")
+          {self, phi, count - 1}
+        true ->
+          # Logger.info("Stable: #{inspect(ak.qQ)}")
+          {self, phi, count}
       end
 
-    {ak, results}
-  end
-
-  def adaptive_zarchan_update_1d(self, z, opts) when is_struct(self, __MODULE__) do
-    q_scale_factor = opts |> Keyword.fetch!(:q_scale_factor)
-    std_scale = opts |> Keyword.fetch!(:std_scale)
-    phi = opts |> Keyword.get(:phi, 0.02)
-
-    {ak, ak_est, ak_res, _phi, _count} =
-      for zz <- z, reduce: {self, [], [], phi, 0} do
-        {ak, results, ak_res, phi, count} ->
-            # perform kalman filtering
-            ak = ak |> predict() |> update(zz)
-
-            # save data
-            results = [ ak.x[0][0] |> Nx.to_number() | results ]
-            ak_res = [ ak.y[0][0] |> Nx.to_number() | ak_res ]
-
-            # y, S = cvfilter.y, cvfilter.S
-            std = Nx.sqrt(ak.sS)
-            # next try continuous std-dev based adjustments
-            resid = abs(ak.y[0][0] |> Nx.to_number())
-            scaled_std = Nx.to_number(std[0][0]) * std_scale
-
-            # Logger.info("StdCheck: #{inspect({resid, scaled_std})}")
-
-            {ak, phi, count} =
-              cond do
-                # Nx.abs(ak.y[0]) |> Nx.greater(std |> Nx.multiply(std_scale)) ->
-                resid > scaled_std ->
-                  phi = phi + q_scale_factor
-                  ak = %{ak | qQ: ak.qQ |> Nx.add(1/q_scale_factor)}
-                  # Logger.info("Increase: #{inspect(ak.qQ |> Nx.to_number)}")
-                  # ak.qQ = q_discrete_white_noise(2, dt, phi)
-                  {ak, phi, count + 1}
-                count > 0 ->
-                  phi = phi - q_scale_factor
-                  ak = %{ak | qQ: ak.qQ |> Nx.subtract(1/q_scale_factor)}
-                  # ak.qQ = q_discrete_white_noise(2, dt, phi)
-                  # Logger.info("Decrease: #{inspect(ak.qQ)}")
-                  {ak, phi, count - 1}
-                true ->
-                  # Logger.info("Stable: #{inspect(ak.qQ)}")
-                  {ak, phi, count}
-              end
-
-            {ak, results, ak_res, phi, count}
-        end
-
-    {ak, %{estimates: ak_est |> Enum.reverse(), residuals: ak_res |> Enum.reverse()}}
+    %{ak | adaptive: %{self.adaptive | phi: phi, count: count}}
   end
 
 end
